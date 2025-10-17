@@ -1,87 +1,69 @@
-from flask import Flask, render_template, request
-import cv2
+import streamlit as st
+from PIL import Image, ImageOps, ImageFilter
 import numpy as np
-import os
-from werkzeug.utils import secure_filename
+import cv2
 
-app = Flask(__name__)
-app.config['UPLOAD_FOLDER'] = 'static/uploads'
+st.title("🖼 Simple Image Processing Website")
 
-# Home route
-@app.route('/')
-def home():
-    return render_template('index.html')
+# File uploader
+uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "png", "jpeg"])
 
-# Upload route
-@app.route('/upload', methods=['POST'])
-def upload():
-    file = request.files['file']
-    filter_type = request.form['filter']
+# Filter options
+filter_type = st.selectbox("Choose a filter:", [
+    "Gray", "Blur", "Edge", "Sharpen", "Invert", "Sepia",
+    "Brightness +", "Brightness -", "Contrast +", "Contrast -",
+    "Sketch", "Gaussian Noise", "Canny Edge"
+])
 
-    # Clear old images in the uploads folder
-    for f in os.listdir(app.config['UPLOAD_FOLDER']):
-        file_path = os.path.join(app.config['UPLOAD_FOLDER'], f)
-        if os.path.isfile(file_path):
-            os.remove(file_path)
-
-    # Save uploaded file
-    filename = secure_filename(file.filename)
-    filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-    file.save(filepath)
-
-    # Read image using OpenCV
-    img = cv2.imread(filepath)
-
-    # Apply selected filter
-    if filter_type == 'gray':
-        processed = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    elif filter_type == 'blur':
-        processed = cv2.GaussianBlur(img, (15, 15), 0)
-    elif filter_type == 'edge':
-        processed = cv2.Canny(img, 100, 200)
-    elif filter_type == 'sharpen':
+def apply_filter(img_cv, filter_name):
+    if filter_name == "Gray":
+        return cv2.cvtColor(img_cv, cv2.COLOR_BGR2GRAY)
+    elif filter_name == "Blur":
+        return cv2.GaussianBlur(img_cv, (15, 15), 0)
+    elif filter_name == "Edge" or filter_name == "Canny Edge":
+        return cv2.Canny(img_cv, 100, 200)
+    elif filter_name == "Sharpen":
         kernel = np.array([[0, -1, 0],
                            [-1, 5, -1],
                            [0, -1, 0]])
-        processed = cv2.filter2D(img, -1, kernel)
-    elif filter_type == 'invert':
-        processed = cv2.bitwise_not(img)
-    elif filter_type == 'sepia':
+        return cv2.filter2D(img_cv, -1, kernel)
+    elif filter_name == "Invert":
+        return cv2.bitwise_not(img_cv)
+    elif filter_name == "Sepia":
         kernel = np.array([[0.272, 0.534, 0.131],
                            [0.349, 0.686, 0.168],
                            [0.393, 0.769, 0.189]])
-        processed = cv2.transform(img, kernel)
-    elif filter_type == 'bright_plus':
-        processed = cv2.convertScaleAbs(img, alpha=1.2, beta=30)
-    elif filter_type == 'bright_minus':
-        processed = cv2.convertScaleAbs(img, alpha=0.8, beta=-30)
-    elif filter_type == 'contrast_plus':
-        processed = cv2.convertScaleAbs(img, alpha=1.5, beta=0)
-    elif filter_type == 'contrast_minus':
-        processed = cv2.convertScaleAbs(img, alpha=0.7, beta=0)
-    elif filter_type == 'sketch':
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        processed = cv2.Canny(gray, 50, 150)
-    elif filter_type == 'noise':
-        row, col, ch = img.shape
+        return cv2.transform(img_cv, kernel)
+    elif filter_name == "Brightness +":
+        return cv2.convertScaleAbs(img_cv, alpha=1.2, beta=30)
+    elif filter_name == "Brightness -":
+        return cv2.convertScaleAbs(img_cv, alpha=0.8, beta=-30)
+    elif filter_name == "Contrast +":
+        return cv2.convertScaleAbs(img_cv, alpha=1.5, beta=0)
+    elif filter_name == "Contrast -":
+        return cv2.convertScaleAbs(img_cv, alpha=0.7, beta=0)
+    elif filter_name == "Sketch":
+        gray = cv2.cvtColor(img_cv, cv2.COLOR_BGR2GRAY)
+        return cv2.Canny(gray, 50, 150)
+    elif filter_name == "Gaussian Noise":
+        row, col, ch = img_cv.shape
         mean = 0
         sigma = 25
         gauss = np.random.normal(mean, sigma, (row, col, ch))
         gauss = gauss.reshape(row, col, ch)
-        processed = cv2.add(img, gauss.astype('uint8'))
-    elif filter_type == 'canny':
-        processed = cv2.Canny(img, 100, 200)
+        return cv2.add(img_cv, gauss.astype('uint8'))
     else:
-        processed = img
+        return img_cv
 
-    # Save processed image
-    processed_filename = 'filtered_' + filename
-    processed_path = os.path.join(app.config['UPLOAD_FOLDER'], processed_filename)
-    cv2.imwrite(processed_path, processed)
+if uploaded_file:
+    img = Image.open(uploaded_file)
+    img_cv = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
+    processed = apply_filter(img_cv, filter_type)
 
-    # Render template with images
-    return render_template('index.html', original=filename, filtered=processed_filename)
+    if len(processed.shape) == 2:
+        processed = cv2.cvtColor(processed, cv2.COLOR_GRAY2RGB)
 
-# Run the app
-if __name__ == '__main__':
-    app.run(debug=True)
+    st.subheader("Original Image")
+    st.image(img, use_column_width=True)
+    st.subheader("Filtered Image")
+    st.image(processed, use_column_width=True)
