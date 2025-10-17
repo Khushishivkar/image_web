@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Simple Image Filter</title>
+  <style>
+    body { font-family: Arial; text-align: center; background: #f5f5f5; }
+    img { width: 300px; margin: 10px; border-radius: 10px; }
+    select, button { padding: 8px; margin: 10px; }
+  </style>
+</head>
+<body>
+  <h2>🖼 Simple Image Processing Website</h2>
+
+  <form action="/upload" method="post" enctype="multipart/form-data">
+    <input type="file" name="file" accept="image/*" required><br>
+    <select name="filter">
+      <option value="gray">Grayscale</option>
+      <option value="blur">Blur</option>
+      <option value="edge">Edge Detection</option>
+      <option value="sharpen">Sharpen</option>
+      <option value="invert">Invert Colors</option>
+      <option value="sepia">Sepia</option>
+      <option value="bright_plus">Brightness +</option>
+      <option value="bright_minus">Brightness -</option>
+      <option value="contrast_plus">Contrast +</option>
+      <option value="contrast_minus">Contrast -</option>
+      <option value="sketch">Sketch</option>
+      <option value="noise">Gaussian Noise</option>
+      <option value="canny">Canny Edge</option>
+    </select><br>
+    <button type="submit">Apply Filter</button>
+  </form>
+
+  {% if original and filtered %}
+    <div>
+      <h3>Original Image</h3>
+      <img src="{{ url_for('static', filename='uploads/' + original) }}">
+      <h3>Filtered Image</h3>
+      <img src="{{ url_for('static', filename='uploads/' + filtered) }}">
+    </div>
+  {% endif %}
+</body>
+</html>
