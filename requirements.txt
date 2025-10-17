@@ -1,3 +1,4 @@
-flask 
-opencv-python 
-pillow 
+streamlit
+opencv-python-headless
+numpy
+pillow
